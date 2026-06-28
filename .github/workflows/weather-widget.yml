@@ -1,0 +1,36 @@
+name: weather-card
+
+on:
+  schedule:
+    - cron: "0 10 * * *"   # 10:00 UTC = 5:00 AM Central — before the morning send
+  workflow_dispatch:        # allow a manual run from the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Playwright + Chromium
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Render weather card
+        run: python generate_weather_card.py
+
+      - name: Commit snapshot if it changed
+        run: |
+          git config user.name  "wpr-weather-bot"
+          git config user.email "editor@wausaupilotandreview.com"
+          git add snapshots/weather-today.png
+          git commit -m "weather: $(date -u +%Y-%m-%d) forecast" || echo "no change"
+          git push
