@@ -6,12 +6,20 @@ Source: National Weather Service (free, no key). Rendered with Playwright/Chromi
 Run locally:   python -m playwright install chromium && python generate_weather_card.py
 In CI:         see .github/workflows/weather-widget.yml
 """
-import json, urllib.request, datetime as dt, pathlib
+import json, urllib.request, datetime as dt, pathlib, base64
 from playwright.sync_api import sync_playwright
 
 LAT, LON = 44.9591, -89.6301
 UA = "WausauPilotReview-weather-widget (editor@wausaupilotandreview.com)"
 OUT = pathlib.Path("snapshots/weather-today.png")
+# Sponsor logo ships with the repo and is inlined into the render. It used to be
+# hot-linked from the site's wp-content path, which 404'd when the site moved its
+# media to a CDN (2026-09) — the card then rendered a broken-image glyph where the
+# sponsor belonged, and nothing failed loudly.
+SPONSOR_LOGO = pathlib.Path("assets/sponsor-peterson-kraemer.jpg")
+if not SPONSOR_LOGO.exists():
+    raise SystemExit(f"missing {SPONSOR_LOGO} — the sponsor logo must be committed with the repo")
+sponsor_src = "data:image/jpeg;base64," + base64.b64encode(SPONSOR_LOGO.read_bytes()).decode()
 
 def get(url):
     req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/geo+json"})
@@ -106,7 +114,7 @@ table{{width:100%;border-collapse:collapse;}}</style></head>
   <table>{rows}</table>
   <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 16px 11px;border-top:1px solid #e3dccb;">
     <div style="font-family:'Source Sans 3',Arial,sans-serif;font-size:10px;color:#9a9384;">Source: National Weather Service &middot; Updated {today.strftime('%b %-d, %Y')}</div>
-    <div style="text-align:right;font-family:'Source Sans 3',Arial,sans-serif;font-size:9px;color:#9a9384;">Weather sponsored by<br><img src="https://wausaupilotandreview.com/wp-content/uploads/2024/02/PK_butterfly-2024-336x137.jpg" width="110" style="margin-top:2px;"></div>
+    <div style="text-align:right;font-family:'Source Sans 3',Arial,sans-serif;font-size:9px;color:#9a9384;">Weather sponsored by<br><img src="{sponsor_src}" width="110" style="margin-top:2px;"></div>
   </div>
 </div></body></html>'''
 
